@@ -1,4 +1,4 @@
 C:\Users\Candela\OneDrive\Escritorio\UAH\3º Año\2º Cuatrimestre\Paradigmas de Programación Avanzada\PL2_PAP\cuda\x64\Debug\PL1_PAP.vcxproj.CopyComplete
-C:\Users\Candela\OneDrive\Escritorio\UAH\3º Año\2º Cuatrimestre\Paradigmas de Programación Avanzada\PL2_PAP\cuda\x64\Debug\PL1_PAP.exe
 C:\Users\Candela\OneDrive\Escritorio\UAH\3º Año\2º Cuatrimestre\Paradigmas de Programación Avanzada\PL2_PAP\cuda\x64\Debug\libcurl-d.dll
 C:\Users\Candela\OneDrive\Escritorio\UAH\3º Año\2º Cuatrimestre\Paradigmas de Programación Avanzada\PL2_PAP\cuda\x64\Debug\zd.dll
+C:\Users\Candela\OneDrive\Escritorio\UAH\3º Año\2º Cuatrimestre\Paradigmas de Programación Avanzada\PL2_PAP\cuda\x64\Debug\PL2_PAP.exe
