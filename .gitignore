@@ -1,16 +1,36 @@
-# Variables de entorno (CONTRASEÑAS - NUNCA SUBIR A GITHUB)
+# Archivos de Visual Studio / CUDA
+**/.vs/
+**/x64/
+**/x86/
+**/Debug/
+**/Release/
+**/*.vcxproj.user
+**/*.user
+**/*.suo
+**/*.aps
+**/*.pch
+**/*.idb
+**/*.exp
+**/*.lib
+**/*.dll
+**/*.pdb
+**/*.obj
+**/*.tlog
+**/*.ipch
+**/*.opendb
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Configuracion Azure local
+.azure/
+
+# Variables de entorno
 .env
 
-# Dependencias de Node.js (no se suben porque pesan mucho y se reinstalan con npm install)
+# Dependencias de Node.js
 node_modules/
 
-# Archivos de configuración del editor
-.vscode/
+# Configuracion de IDEs
 .idea/
-
-# Archivos de sistema
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
+.vscode/

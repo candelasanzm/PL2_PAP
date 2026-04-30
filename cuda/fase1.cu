@@ -1,6 +1,8 @@
 #include <stdio.h> // para printf y scanf
 #include <cuda_runtime.h> // para funciones Cuda
 #include <math.h> // para que funcionen NAN o isnan
+#include <string.h>
+#include "cloud.cuh"
 
 // Definimos el kernel de lo que hara la fase 1
 __global__ void fase1(float* dev_depdelay, int numVuelos, int umbral, int opcion, int* dev_contador) {
@@ -103,6 +105,29 @@ void ejecutarFase1(float* dep_delay, int numVuelos) {
 				// Liberamos memoria
 				cudaFree(dev_contador);
 				cudaFree(dev_depdelay);
+
+				// ============================================================
+				// CLOUD: preguntar si subir resultados
+				// ============================================================
+				char nombreFase[100];
+				char opcionesEntrada[256];
+				char resultados[10][256];
+				int numResultados = 0;
+
+				if (opcion == 1) {
+					snprintf(nombreFase, sizeof(nombreFase), "Fase 1 - Retrasos en Despegues");
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "umbral = %d minutos, total_vuelos = %d", umbral, numVuelos);
+				} else if (opcion == 2) {
+					snprintf(nombreFase, sizeof(nombreFase), "Fase 1 - Adelantos en Despegues");
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "umbral = %d minutos, total_vuelos = %d", umbral, numVuelos);
+				} else if (opcion == 3) {
+					snprintf(nombreFase, sizeof(nombreFase), "Fase 1 - Despegues a tiempo");
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "total_vuelos = %d", numVuelos);
+				}
+
+				snprintf(resultados[0], sizeof(resultados[0]), "Vuelos encontrados: %d (%.2f%% del total)", h_contador, porcentaje);
+
+				preguntar_y_enviar(nombreFase, opcionesEntrada, resultados, numResultados);
 
 				break; // para no entrar en el case 4
 			}

@@ -130,40 +130,6 @@ Dataset* leerCSV(const char* ruta) {
 	return ds; // porque la funcion devuelve Dataset*
 }
 
-void preguntarYEnviar(const char* nombreFase, int numVuelos) {
-	char respuesta;
-	int valida = 0;
-
-	// Limpiar buffer
-	int c;
-	while ((c = getchar()) != '\n' && c != EOF);
-
-	while (!valida) {
-		printf("\nQuieres enviar los resultados al cloud (s/n): ");
-
-		scanf("%c", &respuesta);
-
-		if (respuesta == 's' || respuesta == 'S' || respuesta == 'n' || respuesta == 'N') {
-			valida = 1;
-		}
-		else {
-			printf("Opcion no valida. Introduce 's' o 'n'.\n");
-			while ((c = getchar()) != '\n' && c != EOF);
-		}
-	}
-
-	if (respuesta == 's' || respuesta == 'S') {
-		char opciones[256];
-		char resultado[256];
-		snprintf(opciones, sizeof(opciones), "vuelos_procesados=%d", numVuelos);
-		snprintf(resultado, sizeof(resultado), "ejecucion_completada");
-		enviar_al_cloud(nombreFase, opciones, resultado);
-	}
-	else {
-		printf("Datos no enviados al cloud\n");
-	}
-}
-
 int main() {
 	// Mostramos el titulo de la practica durante 3 segundos antes de continuar
 	printf("======================================================================================================================\n");
@@ -212,19 +178,15 @@ int main() {
 		switch (opcion) {
 			case 1: 
 				ejecutarFase1(ds -> dep_delay, ds -> numVuelos);
-				preguntarYEnviar("Fase 1 - Despegues", ds->numVuelos);
 				break;
 			case 2: 
 				ejecutarFase2(ds->arr_delay, ds->numVuelos, ds->tail_num);
-				preguntarYEnviar("Fase 2 - Aterrizajes", ds->numVuelos);
 				break;
 			case 3: 
 				ejecutarFase3(ds->dep_delay, ds->arr_delay, ds->weather_delay, ds->dep_time, ds->arr_time, ds->numVuelos);
-				preguntarYEnviar("Fase 3 - Retrasos", ds->numVuelos);
 				break;
 			case 4: 
 				ejecutarFase4(ds->origin_seq_id, ds->dest_seq_id, ds->origin_airport, ds->dest_airport, ds->numVuelos);
-				preguntarYEnviar("Fase 4 - Histograma", ds->numVuelos);
 				break;
 			case 5: {
 				// Pedimos la nueva ruta al usuario y cargamos el dataset

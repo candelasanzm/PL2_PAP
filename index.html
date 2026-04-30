@@ -10,7 +10,7 @@
         <h1>Paradigmas de Programación Avanzada</h1>
         <p>Listado de partidas ejecutadas en el programa CUDA, ordenadas por fecha.</p>
 
-        <table border="1" id="tabla">
+        <table id="tabla">
             <thead>
                 <tr>
                     <th>Usuario</th>
@@ -28,12 +28,24 @@
                 .then(data => {
                     const tbody = document.querySelector('#tabla tbody');
                     data.forEach(partida => {
+                        let listaResultados = '';
+                        if (partida.resultados && partida.resultados.length > 0) {
+                            listaResultados = '<ul>';
+                            partida.resultados.forEach(r => {
+                                listaResultados += `<li>${r.detalle}</li>`;
+                            });
+                            listaResultados += '</ul>';
+                        } else {
+                            listaResultados = '<em>Sin resultados</em>';
+                        }
+
+
                         tbody.innerHTML += `
                             <tr>
                                 <td>${partida.usuario}</td>
                                 <td>${partida.fase}</td>
                                 <td>${partida.opciones_entrada || ''}</td>
-                                <td>${partida.resultado || ''}</td>
+                                <td>${listaResultados}</td>
                                 <td>${new Date(partida.fecha_hora).toLocaleString('es-ES')}</td>
                             </tr>
                         `;
