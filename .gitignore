@@ -1,0 +1,16 @@
+# Variables de entorno (CONTRASEÑAS - NUNCA SUBIR A GITHUB)
+.env
+
+# Dependencias de Node.js (no se suben porque pesan mucho y se reinstalan con npm install)
+node_modules/
+
+# Archivos de configuración del editor
+.vscode/
+.idea/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
