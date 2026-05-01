@@ -7,11 +7,14 @@
     </head>
 
     <body>
+        <!-- Cabecera de la pagina -->
         <h1>Paradigmas de Programación Avanzada</h1>
         <p>Listado de partidas ejecutadas en el programa CUDA, ordenadas por fecha.</p>
 
+        <!-- Tabla principal donde se mostraran las partidas -->
         <table id="tabla">
             <thead>
+                <!-- Cabecera de la tabla con el nombre de cada columna -->
                 <tr>
                     <th>Usuario</th>
                     <th>Fase</th>
@@ -20,33 +23,45 @@
                     <th>Fecha y Hora</th>
                 </tr>
             </thead>
+            <!-- Cuerpo de la tabla, se rellena dinamicamente con JavaScript -->
             <tbody></tbody>
         </table>
+
+        <!-- Script que carga las partidas desde la API y las dibuja en la tabla -->
         <script>
+            // Hacemos una petición GET a la API para obtener las partidas registradas
             fetch('/api/partidas')
-                .then(res => res.json())
+                .then(res => res.json()) // convertimos la respuesta a JSON
                 .then(data => {
-                    const tbody = document.querySelector('#tabla tbody');
+                    const tbody = document.querySelector('#tabla tbody'); // seleccionamos el cuerpo de la tabla donde insertamos las filas
+
+                    // Recorremos cada partida del array que nos devuelve el servidor
                     data.forEach(partida => {
+
+                        // Variable donde construiremos el HTML de la lista de resultados
                         let listaResultados = '';
+
+                        // Si la partida tiene resultados, los mostramos en una lista
                         if (partida.resultados && partida.resultados.length > 0) {
-                            listaResultados = '<ul>';
+                            listaResultados = '<ul>'; // abrimos lista no ordenada
+                            // Por cada resultado creamos un <li> con su detalle
                             partida.resultados.forEach(r => {
                                 listaResultados += `<li>${r.detalle}</li>`;
                             });
-                            listaResultados += '</ul>';
+                            listaResultados += '</ul>'; // cerramos la lista
                         } else {
+                            // Si no hay resultados mostramos un mensaje
                             listaResultados = '<em>Sin resultados</em>';
                         }
 
-
+                        // Añadimos una nueva fila a la tabla con todos los datos de la partida
                         tbody.innerHTML += `
                             <tr>
                                 <td>${partida.usuario}</td>
                                 <td>${partida.fase}</td>
-                                <td>${partida.opciones_entrada || ''}</td>
+                                <td>${partida.opciones_entrada || ''}</td> 
                                 <td>${listaResultados}</td>
-                                <td>${new Date(partida.fecha_hora).toLocaleString('es-ES')}</td>
+                                <td>${new Date(partida.fecha_hora).toLocaleString('es-ES')}</td> 
                             </tr>
                         `;
                     });
