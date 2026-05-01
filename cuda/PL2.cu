@@ -130,10 +130,43 @@ Dataset* leerCSV(const char* ruta) {
 	return ds; // porque la funcion devuelve Dataset*
 }
 
+// Funcion que libera toda la memoria reservada por leerCSV
+void liberarDataset(Dataset* ds) {
+	if (ds == NULL) return; // si el dataset esta vacio pues ya esta
+
+	// Liberamos cada string que reservamos con strdup
+	for (int i = 0; i < ds->numVuelos; i++) {
+		if (ds->tail_num[i]) {
+			free(ds->tail_num[i]);
+		}
+		if (ds->origin_airport[i]) {
+			free(ds->origin_airport[i]);
+		}
+		if (ds->dest_airport[i]) {
+			free(ds->dest_airport[i]);
+		}
+	}
+
+	// Liberamos los arrays
+	free(ds->tail_num);
+	free(ds->origin_seq_id);
+	free(ds->origin_airport);
+	free(ds->dest_seq_id);
+	free(ds->dest_airport);
+	free(ds->dep_time);
+	free(ds->dep_delay);
+	free(ds->arr_time);
+	free(ds->arr_delay);
+	free(ds->weather_delay);
+
+	// Liberamos la estructura
+	free(ds);
+}
+
 int main() {
-	// Mostramos el titulo de la practica durante 3 segundos antes de continuar
+	// Mostramos el titulo de la practica durante 1.5 segundos antes de continuar
 	printf("======================================================================================================================\n");
-	printf("						EL1 PAP 2026						  \n");
+	printf("						EL2 PAP 2026						  \n");
 	printf("				Candela Sanz Martin y Maria de la Orden Montes					\n");
 	printf("======================================================================================================================\n"); 
 	printf("\nBienvenido!\n");
@@ -173,7 +206,13 @@ int main() {
 		printf("\n6. Salir");
 		printf("\nElija una opcion: ");
 
-		scanf("%d", &opcion); // Leemos la opcion seleccionada por el usuario
+		// Validamos la respuesta del usuario
+		if (scanf("%d", &opcion) != 1) {
+			printf("Entrada no valida.\n");
+			int c;
+			while ((c = getchar()) != '\n' && c != EOF);
+			continue;
+		}
 
 		switch (opcion) {
 			case 1: 
@@ -214,7 +253,7 @@ int main() {
 					}
 				}
 
-				free(ds); // liberamos el dataset anterior
+				liberarDataset(ds); // liberamos el dataset anterior
 				ds = ds_nuevo; // asignamos el nuevo dataset
 
 				printf("Dataset cargado: %d vuelos\n", ds->numVuelos);
@@ -233,5 +272,6 @@ int main() {
 		}
 	}
 	
+	liberarDataset(ds);
 	return 0;
 }

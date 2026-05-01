@@ -3,6 +3,7 @@
 #include <math.h> // para que funcionen NAN o isnan
 #include <limits.h> // para INT_MIN e INT_MAX
 #include <time.h> // para poder medir el tiempo
+#include "cloud.cuh" // para poder llamar a funciones del fichero cloud
 
 // Definimos un kernel para realizar los calculos de la parte simple
 __global__ void fase3_simple(float* dev_datos, int numVuelos, int* dev_resSimple, int esMax) {
@@ -309,6 +310,23 @@ void tiempoKernels(float* dev_datos, int numVuelos, int* dev_resSimple, int* dev
 	*tiempo_intermedia = (double)(fin - inicio) / CLOCKS_PER_SEC * 1000.0; // contamos cuanto tiempo ha tardado la fase intermedia en ejecutarse
 }
 
+// Funcion auxiliar que construye los datos para el cloud y llama a la funcion donde preguntar si enviamos al cloud. Hacemos una funcion par abreviar el codigo
+void enviarResultadosFase3(const char* campo, int esMax, int res_simple, double tiempo_simple, int res_basica, double tiempo_basica, int res_intermedia, double tiempo_intermedia, int res_reduccion, double tiempo_reduccion, int numVuelos) {
+	char nombreFase[100]; // buffer donde guardamos el nombre que identifica la fase
+	char opcionesEntrada[256]; // buffer donde guardamos los parametros de entrada
+	char resultados[10][256]; // array de hasta 10 resultados cada uno de hasta 256 caracteres
+
+	// Construimos el nombre de la fase y la operacion
+	snprintf(nombreFase, sizeof(nombreFase), "Fase 3 - %s (%s)", campo, esMax ? "Maximo" : "Minimo");
+	snprintf(opcionesEntrada, sizeof(opcionesEntrada), "Campo = %s, Operacion = %s, Total vuelos = %d", campo, esMax ? "max" : "min", numVuelos);
+	snprintf(resultados[0], sizeof(resultados[0]), "Simple: valor = %d, tiempo = %.3f ms", res_simple, tiempo_simple);
+	snprintf(resultados[1], sizeof(resultados[1]), "Basica: valor = %d, tiempo = %.3f ms", res_basica, tiempo_basica);
+	snprintf(resultados[2], sizeof(resultados[2]), "Intermedia: valor = %d, tiempo = %.3f ms", res_intermedia, tiempo_intermedia);
+	snprintf(resultados[3], sizeof(resultados[3]), "Reduccion: valor = %d, tiempo = %.3f ms", res_reduccion, tiempo_reduccion);
+
+	preguntar_y_enviar(nombreFase, opcionesEntrada, resultados, 4);
+}
+
 // Funcion que ejecutaremos en el programa principal para usar la fase 3
 void ejecutarFase3(float* dep_delay, float* arr_delay, float* weather_delay, float* dep_time, float* arr_time, int numVuelos) {
 
@@ -324,7 +342,13 @@ void ejecutarFase3(float* dep_delay, float* arr_delay, float* weather_delay, flo
 		printf("6. Volver al Menu Principal\n");
 		printf("Elija una opcion: ");
 
-		scanf("%d", &opcion); // leemos la opcion seleccionada por el usuario
+		// Validamos la respuesta del usuario
+		if (scanf("%d", &opcion) != 1) {
+			printf("Entrada no valida.\n");
+			int c;
+			while ((c = getchar()) != '\n' && c != EOF);
+			continue;
+		}
 
 		switch (opcion) {
 			case 1:
@@ -342,7 +366,12 @@ void ejecutarFase3(float* dep_delay, float* arr_delay, float* weather_delay, flo
 					printf("3. Volver Atras\n");
 					printf("Seleccione operacion: ");
 
-					scanf("%d", &opcion2); // leemos la nueva opcion 
+					if (scanf("%d", &opcion2) != 1) {
+						printf("Entrada no valida.\n");
+						int c;
+						while ((c = getchar()) != '\n' && c != EOF);
+						continue;
+					}
 
 					switch (opcion2) {
 					case 1:
@@ -389,127 +418,58 @@ void ejecutarFase3(float* dep_delay, float* arr_delay, float* weather_delay, flo
 						dim3 dimGrid(numBloques);
 						dim3 dimBlock(hilosPorBloque);
 
-						// Dependiendo de la opcion seleccionada por el usuario dev_datos sera un campo distinto
+						const char* nombreCampo = ""; // string que identifica el campo para mostrar y enviar al cloud
+						float* dev_datos = NULL; // puntero al array de datos en GPU correspondiente al campo elegido
+
+						// Dependiendo de la opcion seleccionada por el usuario dev_datos y nombreCampo sera un campo distinto
 						if (opcion == 1) {
-							float* dev_datos = dev_depDelay; // campo que usamos si opcion==1
-							int esMax = (opcion2 == 1) ? 1 : 0; // Si el usuario en opcion2 selecciona 1, esMax sera 1, sino sera 0
-
-							// Ejecutamos los kernel
-							double tiempo_simple, tiempo_basica, tiempo_intermedia, tiempo_reduccion; // declaramos unas variables donde mostraremos el tiempo que ha tardado cada metodo
-							tiempoKernels(dev_datos, numVuelos, dev_resSimple, dev_resBasica, dev_resIntermedia, esMax, hilosPorBloque, dimGrid, dimBlock, &tiempo_simple, &tiempo_basica, &tiempo_intermedia);
-							res_reduccion = ejecutarReduccion(dev_datos, numVuelos, esMax, hilosPorBloque, &tiempo_reduccion);
-
-							// Transferimos la informacion de la GPU a la CPU
-							cudaMemcpy(&res_simple, dev_resSimple, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_basica, dev_resBasica, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_intermedia, dev_resIntermedia, sizeof(int), cudaMemcpyDeviceToHost);
-
-							// Imprimimos los resultados en formato tabla donde podemos observar el metodo usado, el resultado obtenido, y el tiempo tardado en cada una de las distintas posibilidades (simple, basica...)
-							printf("\n+-----------------+------------+------------+\n");
-							printf("| %-15s | %10s | %10s |\n", "DEP_DELAY", "Resultado", "Tiempo ms");
-							printf("+-----------------+------------+------------+\n");
-							printf("| %-15s | %10d | %10.3f |\n", "Simple", res_simple, tiempo_simple);
-							printf("| %-15s | %10d | %10.3f |\n", "Basica", res_basica, tiempo_basica);
-							printf("| %-15s | %10d | %10.3f |\n", "Intermedia", res_intermedia, tiempo_intermedia);
-							printf("| %-15s | %10d | %10.3f |\n", "Reduccion", res_reduccion, tiempo_reduccion);
-							printf("+-----------------+------------+------------+\n");
+							dev_datos = dev_depDelay;
+							nombreCampo = "DEP_DELAY";
 						}
 						else if (opcion == 2) {
-							float* dev_datos = dev_arrDelay;
-							int esMax = (opcion2 == 1) ? 1 : 0; // Si el usuario en opcion2 selecciona 1, esMax sera 1, sino sera 0
-
-							// Ejecutamos los kernel
-							double tiempo_simple, tiempo_basica, tiempo_intermedia, tiempo_reduccion;
-							tiempoKernels(dev_datos, numVuelos, dev_resSimple, dev_resBasica, dev_resIntermedia, esMax, hilosPorBloque, dimGrid, dimBlock, &tiempo_simple, &tiempo_basica, &tiempo_intermedia);
-							res_reduccion = ejecutarReduccion(dev_datos, numVuelos, esMax, hilosPorBloque, &tiempo_reduccion);
-
-							// Transferimos la informacion de la GPU a la CPU
-							cudaMemcpy(&res_simple, dev_resSimple, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_basica, dev_resBasica, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_intermedia, dev_resIntermedia, sizeof(int), cudaMemcpyDeviceToHost);
-
-							// Imprimimos los resultados
-							printf("\n+-----------------+------------+------------+\n");
-							printf("| %-15s | %10s | %10s |\n", "ARR_DELAY", "Resultado", "Tiempo ms");
-							printf("+-----------------+------------+------------+\n");
-							printf("| %-15s | %10d | %10.3f |\n", "Simple", res_simple, tiempo_simple);
-							printf("| %-15s | %10d | %10.3f |\n", "Basica", res_basica, tiempo_basica);
-							printf("| %-15s | %10d | %10.3f |\n", "Intermedia", res_intermedia, tiempo_intermedia);
-							printf("| %-15s | %10d | %10.3f |\n", "Reduccion", res_reduccion, tiempo_reduccion);
-							printf("+-----------------+------------+------------+\n");
+							dev_datos = dev_arrDelay;
+							nombreCampo = "ARR_DELAY";
 						}
 						else if (opcion == 3) {
-							float* dev_datos = dev_weatherDelay;
-							int esMax = (opcion2 == 1) ? 1 : 0; // Si el usuario en opcion2 selecciona 1, esMax sera 1, sino sera 0
-
-							// Ejecutamos los kernel
-							double tiempo_simple, tiempo_basica, tiempo_intermedia, tiempo_reduccion;
-							tiempoKernels(dev_datos, numVuelos, dev_resSimple, dev_resBasica, dev_resIntermedia, esMax, hilosPorBloque, dimGrid, dimBlock, &tiempo_simple, &tiempo_basica, &tiempo_intermedia);
-							res_reduccion = ejecutarReduccion(dev_datos, numVuelos, esMax, hilosPorBloque, &tiempo_reduccion);
-
-							// Transferimos la informacion de la GPU a la CPU
-							cudaMemcpy(&res_simple, dev_resSimple, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_basica, dev_resBasica, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_intermedia, dev_resIntermedia, sizeof(int), cudaMemcpyDeviceToHost);
-
-							// Imprimimos los resultados
-							printf("\n+-----------------+------------+------------+\n");
-							printf("| %-15s | %10s | %10s |\n", "WEATHER_DELAY", "Resultado", "Tiempo ms");
-							printf("+-----------------+------------+------------+\n");
-							printf("| %-15s | %10d | %10.3f |\n", "Simple", res_simple, tiempo_simple);
-							printf("| %-15s | %10d | %10.3f |\n", "Basica", res_basica, tiempo_basica);
-							printf("| %-15s | %10d | %10.3f |\n", "Intermedia", res_intermedia, tiempo_intermedia);
-							printf("| %-15s | %10d | %10.3f |\n", "Reduccion", res_reduccion, tiempo_reduccion);
-							printf("+-----------------+------------+------------+\n");
+							dev_datos = dev_weatherDelay;
+							nombreCampo = "WEATHER_DELAY";
 						}
 						else if (opcion == 4) {
-							float* dev_datos = dev_depTime;
-							int esMax = (opcion2 == 1) ? 1 : 0; // Si el usuario en opcion2 selecciona 1, esMax sera 1, sino sera 0
-
-							// Ejecutamos los kernel
-							double tiempo_simple, tiempo_basica, tiempo_intermedia, tiempo_reduccion;
-							tiempoKernels(dev_datos, numVuelos, dev_resSimple, dev_resBasica, dev_resIntermedia, esMax, hilosPorBloque, dimGrid, dimBlock, &tiempo_simple, &tiempo_basica, &tiempo_intermedia);
-							res_reduccion = ejecutarReduccion(dev_datos, numVuelos, esMax, hilosPorBloque, &tiempo_reduccion);
-
-							// Transferimos la informacion de la GPU a la CPU
-							cudaMemcpy(&res_simple, dev_resSimple, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_basica, dev_resBasica, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_intermedia, dev_resIntermedia, sizeof(int), cudaMemcpyDeviceToHost);
-
-							// Imprimimos los resultados
-							printf("\n+-----------------+------------+------------+\n");
-							printf("| %-15s | %10s | %10s |\n", "DEP_TIME", "Resultado", "Tiempo ms");
-							printf("+-----------------+------------+------------+\n");
-							printf("| %-15s | %10d | %10.3f |\n", "Simple", res_simple, tiempo_simple);
-							printf("| %-15s | %10d | %10.3f |\n", "Basica", res_basica, tiempo_basica);
-							printf("| %-15s | %10d | %10.3f |\n", "Intermedia", res_intermedia, tiempo_intermedia);
-							printf("| %-15s | %10d | %10.3f |\n", "Reduccion", res_reduccion, tiempo_reduccion);
-							printf("+-----------------+------------+------------+\n");
+							dev_datos = dev_depTime;
+							nombreCampo = "DEP_TIME";
 						}
 						else if (opcion == 5) {
-							float* dev_datos = dev_arrTime;
-							int esMax = (opcion2 == 1) ? 1 : 0; // Si el usuario en opcion2 selecciona 1, esMax sera 1, sino sera 0
-
-							// Ejecutamos los kernel
-							double tiempo_simple, tiempo_basica, tiempo_intermedia, tiempo_reduccion;
-							tiempoKernels(dev_datos, numVuelos, dev_resSimple, dev_resBasica, dev_resIntermedia, esMax, hilosPorBloque, dimGrid, dimBlock, &tiempo_simple, &tiempo_basica, &tiempo_intermedia);
-							res_reduccion = ejecutarReduccion(dev_datos, numVuelos, esMax, hilosPorBloque, &tiempo_reduccion);
-
-							// Transferimos la informacion de la GPU a la CPU
-							cudaMemcpy(&res_simple, dev_resSimple, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_basica, dev_resBasica, sizeof(int), cudaMemcpyDeviceToHost);
-							cudaMemcpy(&res_intermedia, dev_resIntermedia, sizeof(int), cudaMemcpyDeviceToHost);
-
-							// Imprimimos los resultados
-							printf("\n+-----------------+------------+------------+\n");
-							printf("| %-15s | %10s | %10s |\n", "ARR_TIME", "Resultado", "Tiempo ms");
-							printf("+-----------------+------------+------------+\n");
-							printf("| %-15s | %10d | %10.3f |\n", "Simple", res_simple, tiempo_simple);
-							printf("| %-15s | %10d | %10.3f |\n", "Basica", res_basica, tiempo_basica);
-							printf("| %-15s | %10d | %10.3f |\n", "Intermedia", res_intermedia, tiempo_intermedia);
-							printf("| %-15s | %10d | %10.3f |\n", "Reduccion", res_reduccion, tiempo_reduccion);
-							printf("+-----------------+------------+------------+\n");
+							dev_datos = dev_arrTime;
+							nombreCampo = "ARR_TIME";
 						}
+
+						// Dependiendo lo que el usuario elija vemos si quiere maximo (1) o minimo (0)
+						int esMax = (opcion2 == 1) ? 1 : 0;
+						
+						// Ejecutamos los kernel
+						double tiempo_simple, tiempo_basica, tiempo_intermedia, tiempo_reduccion; // declaramos unas variables donde mostraremos el tiempo que ha tardado cada metodo
+						tiempoKernels(dev_datos, numVuelos, dev_resSimple, dev_resBasica, dev_resIntermedia, esMax, hilosPorBloque, dimGrid, dimBlock, &tiempo_simple, &tiempo_basica, &tiempo_intermedia);
+						res_reduccion = ejecutarReduccion(dev_datos, numVuelos, esMax, hilosPorBloque, &tiempo_reduccion);
+
+						// Transferimos la informacion de la GPU a la CPU
+						cudaMemcpy(&res_simple, dev_resSimple, sizeof(int), cudaMemcpyDeviceToHost);
+						cudaMemcpy(&res_basica, dev_resBasica, sizeof(int), cudaMemcpyDeviceToHost);
+						cudaMemcpy(&res_intermedia, dev_resIntermedia, sizeof(int), cudaMemcpyDeviceToHost);
+
+						// Imprimimos los resultados en formato tabla donde podemos observar el metodo usado, el resultado obtenido, y el tiempo tardado en cada una de las distintas posibilidades (simple, basica...)
+						printf("\n+-----------------+------------+------------+\n");
+						printf("| %-15s | %10s | %10s |\n", nombreCampo, "Resultado", "Tiempo ms");
+						printf("+-----------------+------------+------------+\n");
+						printf("| %-15s | %10d | %10.3f |\n", "Simple", res_simple, tiempo_simple);
+						printf("| %-15s | %10d | %10.3f |\n", "Basica", res_basica, tiempo_basica);
+						printf("| %-15s | %10d | %10.3f |\n", "Intermedia", res_intermedia, tiempo_intermedia);
+						printf("| %-15s | %10d | %10.3f |\n", "Reduccion", res_reduccion, tiempo_reduccion);
+						printf("+-----------------+------------+------------+\n");
+						
+						// ============================================================
+						// CLOUD: enviar los datos
+						// ============================================================
+						enviarResultadosFase3(nombreCampo, esMax, res_simple, tiempo_simple, res_basica, tiempo_basica, res_intermedia, tiempo_intermedia, res_reduccion, tiempo_reduccion, numVuelos);
 
 						// Liberamos la memoria
 						cudaFree(dev_depDelay);

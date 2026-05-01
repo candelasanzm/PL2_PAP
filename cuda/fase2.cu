@@ -3,6 +3,7 @@
 #include <math.h> // para que funcionen NAN o isnan
 #include <stdlib.h> // para malloc, atoi, atof
 #include <string.h> // para que strdup funcione
+#include "cloud.cuh" // para llamar a las funciones de cloud
 
 __constant__ int c_umbral; // declaramos la memoria constante
 
@@ -54,7 +55,12 @@ void ejecutarFase2(float* arr_delay, int numVuelos, char** tail_num) {
 		printf("4. Volver al Menu Principal\n");
 		printf("Elija una opcion: ");
 
-		scanf("%d", &opcion); // recogemos la opcion elegida por el usuario
+		if (scanf("%d", &opcion) != 1) {
+			printf("Entrada no valida.\n");
+			int c;
+			while ((c = getchar()) != '\n' && c != EOF);
+			continue;
+		}
 
 		int umbral = -1; // variable donde recogeremos el umbral que quiera usar el usuario
 
@@ -64,7 +70,14 @@ void ejecutarFase2(float* arr_delay, int numVuelos, char** tail_num) {
 			while (umbral < 0) {
 				printf("\nEscribe el umbral (en minutos) deseado: ");
 
-				scanf("%d", &umbral); // leemos el umbral que el usuario quiera usar
+				// Validamos la respuesta del usuario
+				if (scanf("%d", &umbral) != 1) {
+					printf("Entrada no valida.\n");
+					int c;
+					while ((c = getchar()) != '\n' && c != EOF);
+					umbral = -1; 
+					continue;
+				}
 
 				// Si el umbral es negativo dará un error y volvera a pedir un umbral valido
 				if (umbral < 0) {
@@ -72,6 +85,12 @@ void ejecutarFase2(float* arr_delay, int numVuelos, char** tail_num) {
 				}
 			}
 		case 3: {
+			// Validacion: comprobar numVuelos
+			if (numVuelos <= 0) {
+				printf("ERROR: No hay vuelos cargados.\n");
+				break;
+			}
+
 			// Copiar umbral en memoria constante
 			cudaMemcpyToSymbol(c_umbral, &umbral, sizeof(int));
 
@@ -83,6 +102,12 @@ void ejecutarFase2(float* arr_delay, int numVuelos, char** tail_num) {
 
 			// CUDA no puede trabajar con un array de punteros a strings. Hay que crear un array plano para poder usar matriculas en la GPU
 			char* h_tail = (char*)malloc(numVuelos * 16 * sizeof(char)); // reservamos espacio para almacenar todas las matriculas
+			// Verificamos que el malloc tuvo exito
+			if (h_tail == NULL) {
+				printf("ERROR: No se pudo reservar memoria en CPU.\n");
+				break;
+			}
+
 			for (int i = 0; i < numVuelos; i++) {
 				if (tail_num[i] != NULL) { // si hay matriculas la copiamos
 					strncpy(h_tail + i * 16, tail_num[i], 15); // copiamos la matricula en su posicion del array plano, i*16 nos da la posicion de inicio de la matricula i en el array plano, 15 es el maximo de caracteres para dejar espacio al '\0' al final.
@@ -95,6 +120,18 @@ void ejecutarFase2(float* arr_delay, int numVuelos, char** tail_num) {
 			// Reservamos espacion en memoria que ocuparemos con los arrays que devuelve la GPU a la CPU
 			int* h_indices = (int*)malloc(numVuelos * sizeof(int));
 			int* h_tiempo = (int*)malloc(numVuelos * sizeof(int));
+			// Validamos que las reservas tuvieron exito y liberamos cualquier memoria reservada antes de salir
+			if (h_indices == NULL || h_tiempo == NULL) {
+				printf("ERROR: No se pudo reservar memoria en CPU.\n");
+				free(h_tail);
+				if (h_indices) {
+					free(h_indices);
+				}
+				else if (h_tiempo) {
+					free(h_tiempo);
+				}
+				break;
+			}
 			int h_contador = 0; // hacemos un contador para indicar cuantos vuelos salen
 
 			// Declaramos los punteros
@@ -142,6 +179,51 @@ void ejecutarFase2(float* arr_delay, int numVuelos, char** tail_num) {
 						printf("- Matricula %s. Adelanto: %d minutos.\n", tail_num[h_indices[i]], -h_tiempo[i]);
 					}
 				}
+			}
+
+			// ============================================================
+			// CLOUD: preguntar si subir resultados
+			// ============================================================
+			// Solo enviamos al cloud si el calculo ha encontrado al menos un vuelo
+			if (h_contador > 0) {
+				char nombreFase[100]; // buffer donde guardamos el nombre que identifica la fase
+				char opcionesEntrada[256]; // buffer donde guardaremos los parametros de entrada usados
+				char resultados[10][256]; // array de hasta 10 resultados, cada uno de hasta 256 caracteres
+
+				// Limitamos a un maximo de 10 resultados, si encontramos menos solo guardamos los encontrados para no sobrecargar la base de datos
+				int total = (h_contador > 10) ? 10 : h_contador;
+
+				if (opcion == 1) {
+					snprintf(nombreFase, sizeof(nombreFase), "Fase 2 - Retrasos en Aterrizajes");
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "Umbral = %d minutos, Vuelos encontrados = %d (de %d)", umbral, h_contador, numVuelos);
+				}
+				else if (opcion == 2) {
+					snprintf(nombreFase, sizeof(nombreFase), "Fase 2 - Adelantos en Aterrizajes");
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "Umbral = %d minutos, Vuelos encontrados = %d (de %d)", umbral, h_contador, numVuelos);
+				}
+				else if (opcion == 3) {
+					snprintf(nombreFase, sizeof(nombreFase), "Fase 2 - Aterrizajes a tiempo");
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "Vuelos encontrados = %d (de %d)", h_contador, numVuelos);
+				}
+
+				// Construimos el array de resultados con los datos de cada matricula encontrada
+				for (int i = 0; i < total; i++) {
+					if (opcion == 1) {
+						snprintf(resultados[i], sizeof(resultados[i]), "Matriculas %s - Retraso: %d minutos", tail_num[h_indices[i]], h_tiempo[i]);
+					} 
+					else if (opcion == 2) {
+						snprintf(resultados[i], sizeof(resultados[i]), "Matriculas %s - Adelanto: %d minutos", tail_num[h_indices[i]], -h_tiempo[i]);
+					} 
+					else if (opcion == 3) {
+						snprintf(resultados[i], sizeof(resultados[i]), "Matriculas %s - Aterriza a tiempo", tail_num[h_indices[i]]);
+					}
+				}
+
+				// Llamamos a la funcion que pregunta al usuario si subir los datos al cloud
+				preguntar_y_enviar(nombreFase, opcionesEntrada, resultados, total);
+			}
+			else {
+				printf("\nNo hay resultados que enviar al cloud.\n");
 			}
 
 			// Liberamos memoria

@@ -1,8 +1,8 @@
 #include <stdio.h> // para printf y scanf
 #include <cuda_runtime.h> // para funciones Cuda
 #include <math.h> // para que funcionen NAN o isnan
-#include <string.h>
-#include "cloud.cuh"
+#include <string.h> // para que snprintf funcione
+#include "cloud.cuh" // para poder acceder al archivo cloud
 
 // Definimos el kernel de lo que hara la fase 1
 __global__ void fase1(float* dev_depdelay, int numVuelos, int umbral, int opcion, int* dev_contador) {
@@ -109,24 +109,28 @@ void ejecutarFase1(float* dep_delay, int numVuelos) {
 				// ============================================================
 				// CLOUD: preguntar si subir resultados
 				// ============================================================
-				char nombreFase[100];
-				char opcionesEntrada[256];
-				char resultados[10][256];
-				int numResultados = 0;
+				char nombreFase[100]; // buffer donde guardamos el nombre que identifica la fase ejecutada
+				char opcionesEntrada[256]; // buffer donde guardamos los parametro de entrada usados
+				char resultados[10][256]; // array de hasta 10 resultados cada uno de hasta 256 caracteres
+				int numResultados = 0; // contados de cuantos resultados enviamos al cloud
 
+				// En funcion de la opcion seleccionada construimos el nombre de la fase y las opciones de entrada
 				if (opcion == 1) {
 					snprintf(nombreFase, sizeof(nombreFase), "Fase 1 - Retrasos en Despegues");
-					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "umbral = %d minutos, total_vuelos = %d", umbral, numVuelos);
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "Umbral = %d minutos, Vuelos encontrados = %d (de %d)", umbral, h_contador, numVuelos);
 				} else if (opcion == 2) {
 					snprintf(nombreFase, sizeof(nombreFase), "Fase 1 - Adelantos en Despegues");
-					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "umbral = %d minutos, total_vuelos = %d", umbral, numVuelos);
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "Umbral = %d minutos, Vuelos encontrados = %d (de %d)", umbral, h_contador, numVuelos);
 				} else if (opcion == 3) {
 					snprintf(nombreFase, sizeof(nombreFase), "Fase 1 - Despegues a tiempo");
-					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "total_vuelos = %d", numVuelos);
+					snprintf(opcionesEntrada, sizeof(opcionesEntrada), "Vuelos encontrados = %d (de %d)", h_contador, numVuelos);
 				}
 
+				// Guardamos un unico resultado a modo de resumen
 				snprintf(resultados[0], sizeof(resultados[0]), "Vuelos encontrados: %d (%.2f%% del total)", h_contador, porcentaje);
+				numResultados = 1;
 
+				// Llamamos a la funcion que pregunta al usuario si quiere subir los datos al cloud
 				preguntar_y_enviar(nombreFase, opcionesEntrada, resultados, numResultados);
 
 				break; // para no entrar en el case 4
