@@ -11,6 +11,42 @@
         <h1>Paradigmas de Programación Avanzada</h1>
         <p>Listado de partidas ejecutadas en el programa CUDA, ordenadas por fecha.</p>
 
+        <!-- Estadisticas globales calculadas a partir de las partidas-->
+        <div class="estadisticas">
+            <div class="stat-card">
+                <div class="stat-numero" id="totalPartidas">0</div>
+                <div class="stat-label">Partidas Totales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-numero" id="totalUsuarios">0</div>
+                <div class="stat-label">Usuarios Activos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-numero" id="faseMasUsada">-</div>
+                <div class="stat-label">Fase Más Usada</div>
+            </div>
+        </div>
+
+        <!-- Filtros de busqueda -->
+         <div class="filtros">
+            <input type="text" id="filtroUsuario" placeholder="Filtrar por usuario...">
+            <select id="filtroFase">
+                <option value="">Todas las fases</option>
+                <option value="Fase 1">Fase 1 - Despegues</option>
+                <option value="Fase 2">Fase 2 - Aterrizajes</option>
+                <option value="Fase 3">Fase 3 - Estadisticas</option>
+                <option value="Fase 4">Fase 4 - Aeropuertos</option>
+            </select>
+            <select id="filtroSubfase">
+                <option value="">Todas las opciones</option>
+            </select>
+            <button id="btnLimpiar">Limpiar Filtros</button>
+        </div>
+        
+        <div class="contador" id="contador">
+            Mostrando <strong>0</strong> de <strong>0</strong> partidas registradas.
+        </div>
+
         <!-- Tabla principal donde se mostraran las partidas -->
         <table id="tabla">
             <thead>
@@ -29,46 +65,189 @@
 
         <!-- Script que carga las partidas desde la API y las dibuja en la tabla -->
         <script>
+            let partidas = []; // guardamos todas las partidas para poder filtrar sin volver a la base de datos
+
+            // Objeto que contiene las subopciones disponibles para cada fase
+            const subopcionesPorFase = {
+                'Fase 1': [
+                    'Fase 1 - Retrasos en Despegues',
+                    'Fase 1 - Adelantos en Despegues',
+                    'Fase 1 - Despegues a tiempo'
+                ],
+                'Fase 2': [
+                    'Fase 2 - Retrasos en Aterrizajes',
+                    'Fase 2 - Adelantos en Aterrizajes',
+                    'Fase 2 - Aterrizajes a tiempo'
+                ],
+                'Fase 3': [
+                    'Fase 3 - DEP_DELAY (Maximo)',
+                    'Fase 3 - DEP_DELAY (Minimo)',
+                    'Fase 3 - ARR_DELAY (Maximo)',
+                    'Fase 3 - ARR_DELAY (Minimo)',
+                    'Fase 3 - WEATHER_DELAY (Maximo)',
+                    'Fase 3 - WEATHER_DELAY (Minimo)',
+                    'Fase 3 - DEP_TIME (Maximo)',
+                    'Fase 3 - DEP_TIME (Minimo)',
+                    'Fase 3 - ARR_TIME (Maximo)',
+                    'Fase 3 - ARR_TIME (Minimo)'
+                ],
+                'Fase 4': [
+                    'Fase 4 - Histograma Aeropuertos origen',
+                    'Fase 4 - Histograma Aeropuertos destino',
+                    'Fase 4 - Busqueda Aeropuerto origen',
+                    'Fase 4 - Busqueda Aeropuerto destino',
+                    'Fase 4 - Top 5 Mas Concurridos (origen)',
+                    'Fase 4 - Top 5 Mas Concurridos (destino)',
+                    'Fase 4 - Top 5 Menos Concurridos (origen)',
+                    'Fase 4 - Top 5 Menos Concurridos (destino)'
+                ]
+            };
+
             // Hacemos una petición GET a la API para obtener las partidas registradas
             fetch('/api/partidas')
                 .then(res => res.json()) // convertimos la respuesta a JSON
                 .then(data => {
-                    const tbody = document.querySelector('#tabla tbody'); // seleccionamos el cuerpo de la tabla donde insertamos las filas
-
-                    // Recorremos cada partida del array que nos devuelve el servidor
-                    data.forEach(partida => {
-
-                        // Variable donde construiremos el HTML de la lista de resultados
-                        let listaResultados = '';
-
-                        // Si la partida tiene resultados, los mostramos en una lista
-                        if (partida.resultados && partida.resultados.length > 0) {
-                            listaResultados = '<ul>'; // abrimos lista no ordenada
-                            // Por cada resultado creamos un <li> con su detalle
-                            partida.resultados.forEach(r => {
-                                listaResultados += `<li>${r.detalle}</li>`;
-                            });
-                            listaResultados += '</ul>'; // cerramos la lista
-                        } else {
-                            // Si no hay resultados mostramos un mensaje
-                            listaResultados = '<em>Sin resultados</em>';
-                        }
-
-                        // Añadimos una nueva fila a la tabla con todos los datos de la partida
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${partida.usuario}</td>
-                                <td>${partida.fase}</td>
-                                <td>${partida.opciones_entrada || ''}</td> 
-                                <td>${listaResultados}</td>
-                                <td>${new Date(partida.fecha_hora).toLocaleString('es-ES')}</td> 
-                            </tr>
-                        `;
-                    });
+                    partidas = data; // guardamos las partidas para luego filtrar
+                    calcularEstadisticas(data); // calculamos las estadisticas globales 
+                    dibujarTabla(data); // dibujamos la tabla con todas las partidas
                 })
                 .catch(error => {
                     console.error('Error al cargar las partidas:', error);
                 });
+
+            // Funcion que rellena el desplegable de las fases
+            function rellenarSubFases() {
+                const faseSeleccionada = document.getElementById('filtroFase').value;
+                const subfaseSelect = document.getElementById('filtroSubfase');
+
+                // Limpiamos el desplegable y dejamos solo la opcion "Todas"
+                subfaseSelect.innerHTML = '<option value="">Todas las opciones</option>';
+
+                // Si no hay fase seleccionada o no tenemos subopciones para ella no hacemos mas
+                if (!faseSeleccionada || !subopcionesPorFase[faseSeleccionada]) {
+                    return;
+                }
+
+                // Por cada subopcion de la fase elegida, creamos una opcion en el desplegable
+                subopcionesPorFase[faseSeleccionada].forEach(subfase => {
+                    const option = document.createElement('option');
+                    option.value = subfase;
+                    option.textContent = subfase;
+                    subfaseSelect.appendChild(option);
+                });
+            }
+
+            // Funcion que dibuja la tabla con las partidas
+            function dibujarTabla(partidasMostrar) {
+                const tbody = document.querySelector('#tabla tbody'); // seleccionamos el cuerpo de la tabla donde insertamos las filas
+                tbody.innerHTML = ''; // limpiamos el contenido del tbody para evitar duplicados
+                    
+                // Actualizamos el contador con las partidas a mostrar y el total
+                document.getElementById('contador').innerHTML = `Mostrando <strong>${partidasMostrar.length}</strong> de <strong>${partidas.length}</strong> partidas registradas.`;
+
+                // Recorremos cada partida del array que nos devuelve el servidor
+                partidasMostrar.forEach(partida => {
+
+                    // Variable donde construiremos el HTML de la lista de resultados
+                    let listaResultados = '';
+
+                    // Si la partida tiene resultados, los mostramos en una lista
+                    if (partida.resultados && partida.resultados.length > 0) {
+                        listaResultados = '<ul>'; // abrimos lista no ordenada
+                        // Por cada resultado creamos un <li> con su detalle
+                        partida.resultados.forEach(r => {
+                            listaResultados += `<li>${r.detalle}</li>`;
+                        });
+                        listaResultados += '</ul>'; // cerramos la lista
+                    } else {
+                        // Si no hay resultados mostramos un mensaje
+                        listaResultados = '<em>Sin resultados</em>';
+                    }
+
+                    // Añadimos una nueva fila a la tabla con todos los datos de la partida
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${partida.usuario}</td>
+                            <td>${partida.fase}</td>
+                            <td>${partida.opciones_entrada || ''}</td> 
+                            <td>${listaResultados}</td>
+                            <td>${new Date(partida.fecha_hora).toLocaleString('es-ES')}</td> 
+                        </tr>
+                    `;
+                });
+            }
+
+            // Funcion que calcula las estadisticas globales
+            function calcularEstadisticas(partidas) {
+                // Total de partidas
+                document.getElementById('totalPartidas').textContent = partidas.length;
+
+                // Usuarios activos: usamos un set para eliminar duplicados
+                const usuariosUnicos = new Set(partidas.map(p => p.usuario));
+                document.getElementById('totalUsuarios').textContent = usuariosUnicos.size;
+
+                // Fase más usada: contamos cuantas veces aparece cada fase
+                const contadorFases = {}; // objeto donde guardamos cuantas veces aparece cada fase
+                partidas.forEach(p => {
+                    contadorFases[p.fase] = (contadorFases[p.fase] || 0) + 1; // si no existe la creamos a 1, si existe sumamos 1
+                });
+
+                // Buscamos la fase con mas apariciones
+                let faseMasUsada = '-';
+                let maxConteo = 0;
+                for (const fase in contadorFases) {
+                    if (contadorFases[fase] > maxConteo) {
+                        maxConteo = contadorFases[fase];
+                        faseMasUsada = fase;
+                    }
+                }
+
+                // Si la fase es muy larga la acortamos para que quepa visualmente
+                if (faseMasUsada.length > 30) {
+                    faseMasUsada = faseMasUsada.substring(0, 30) + '...';
+                }
+
+                document.getElementById('faseMasUsada').textContent = faseMasUsada;
+            }
+
+            // Funcion que aplica los filtros y vuelve a dibujar la tabla
+            function aplicarFiltros() {
+                const textoUsuario = document.getElementById('filtroUsuario').value.toLowerCase(); // texto del filtro de usuario en minusculas
+                const faseSeleccionada = document.getElementById('filtroFase').value; // fase seleccionada en el desplegable
+                const subfaseSeleccionada = document.getElementById('filtroSubfase').value; // subfase seleccionada en el desplegable
+
+                const partidasFiltradas = partidas.filter(partida => {
+                    const coincideUsuario = !textoUsuario || partida.usuario.toLowerCase().includes(textoUsuario); // si el filtro de usuario esta vacio o el usuario de la partida incluye el texto del filtro
+                    
+                    // Si hay subfase elegida debe coincidir exactamente. Si solo hay fase elegida basta con que la partida empiece por ese texto
+                    let coincideFase = true; // por defecto la partida coincide con el filtro de fase
+                    if (subfaseSeleccionada) {
+                        coincideFase = partida.fase === subfaseSeleccionada; // si hay subfase seleccionada, la fase de la partida debe coincidir exactamente con ella
+                    } else if (faseSeleccionada) {
+                        coincideFase = partida.fase.startsWith(faseSeleccionada); // si solo hay fase seleccionada, la fase de la partida debe empezar por el texto de la fase seleccionada
+                    }
+
+                    return coincideUsuario && coincideFase; // la partida se muestra si coincide el filtro de usuario y el filtro de fase
+                });
+
+                dibujarTabla(partidasFiltradas);
+            }
+
+            // Eventos: cuando el usuario interactua con los filtros
+            document.getElementById('filtroUsuario').addEventListener('input', aplicarFiltros); // cada vez que el usuario escribe en el filtro de usuario, aplicamos los filtros
+            document.getElementById('filtroFase').addEventListener('change', () => {
+                rellenarSubFases(); // cada vez que el usuario cambia la fase seleccionada, actualizamos las subfases disponibles
+                aplicarFiltros(); // cada vez que el usuario cambia la fase seleccionada, aplicamos los filtros
+            }); // cada vez que el usuario cambia la fase seleccionada, aplicamos los filtros
+            document.getElementById('filtroSubfase').addEventListener('change', aplicarFiltros); // cada vez que el usuario cambia la subfase seleccionada, aplicamos los filtros
+
+            // Botón para limpiar los filtros y mostrar todas las partidas otra vez
+            document.getElementById('btnLimpiar').addEventListener('click', () => {
+                document.getElementById('filtroUsuario').value = ''; // limpiamos el filtro de usuario
+                document.getElementById('filtroFase').value = ''; // limpiamos el filtro de fase
+                document.getElementById('filtroSubfase').value = ''; // limpiamos el filtro de subfase
+                aplicarFiltros(); // volvemos a dibujar la tabla con todas las partidas
+            });
         </script>
     </body>
 </html>
