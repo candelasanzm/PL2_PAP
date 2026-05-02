@@ -52,11 +52,11 @@
             <thead>
                 <!-- Cabecera de la tabla con el nombre de cada columna -->
                 <tr>
-                    <th>Usuario</th>
-                    <th>Fase</th>
-                    <th>Opciones de Entrada</th>
+                    <th data-columna="usuario">Usuario<span class="flecha">▼</span></th>
+                    <th data-columna="fase">Fase<span class="flecha">▼</span></th>
+                    <th data-columna="opciones_entrada">Opciones de Entrada<span class="flecha">▼</span></th>
                     <th>Resultados</th>
-                    <th>Fecha y Hora</th>
+                    <th data-columna="fecha_hora">Fecha y Hora<span class="flecha">▼</span></th>
                 </tr>
             </thead>
             <!-- Cuerpo de la tabla, se rellena dinamicamente con JavaScript -->
@@ -66,6 +66,9 @@
         <!-- Script que carga las partidas desde la API y las dibuja en la tabla -->
         <script>
             let partidas = []; // guardamos todas las partidas para poder filtrar sin volver a la base de datos
+
+            let columnaOrdenada = "fecha_hora"; // por defecto ordenamos por fecha y hora
+            let orden = "desc"; // por defecto orden descendente (de mas reciente a mas antigua)
 
             // Objeto que contiene las subopciones disponibles para cada fase
             const subopcionesPorFase = {
@@ -109,7 +112,7 @@
                 .then(data => {
                     partidas = data; // guardamos las partidas para luego filtrar
                     calcularEstadisticas(data); // calculamos las estadisticas globales 
-                    dibujarTabla(data); // dibujamos la tabla con todas las partidas
+                    aplicarFiltros(); // aplicamos los filtros al inicio y dibujamos la tabla
                 })
                 .catch(error => {
                     console.error('Error al cargar las partidas:', error);
@@ -145,6 +148,17 @@
                 // Actualizamos el contador con las partidas a mostrar y el total
                 document.getElementById('contador').innerHTML = `Mostrando <strong>${partidasMostrar.length}</strong> de <strong>${partidas.length}</strong> partidas registradas.`;
 
+                // Ponemos las flechitas de ordenacion 
+                document.querySelectorAll('th .flecha').forEach(f => {
+                    f.textContent = '▼'; // por defecto todas las columnas tienen la flecha de ordenacion hacia abajo
+                    f.classList.remove('activa'); // eliminamos las clases de ordenacion para quitar el color a la flecha
+                });
+                const cabeceraOrden = document.querySelector(`th[data-columna="${columnaOrdenada}"] .flecha`);
+                if (cabeceraOrden) {
+                    cabeceraOrden.textContent = orden === 'asc' ? ' ▲' : ' ▼';
+                    cabeceraOrden.classList.add('activa'); // añadimos una clase para resaltar la columna por la que se esta ordenando
+                }
+
                 // Recorremos cada partida del array que nos devuelve el servidor
                 partidasMostrar.forEach(partida => {
 
@@ -153,10 +167,39 @@
 
                     // Si la partida tiene resultados, los mostramos en una lista
                     if (partida.resultados && partida.resultados.length > 0) {
+                        // Buscamos el valor maximo de vuelos para escalar las barras del histograma
+                        let maxVuelos = 0;
+                        partida.resultados.forEach(r => {
+                            const match = r.detalle.match(/(\d+)\s+vuelos/); // buscamos un numero seguido de "vuelos" en el detalle del resultado
+                            if (match) {
+                                const valor = parseInt(match[1]); // si encontramos el patron, convertimos el numero a entero
+                                if (valor > maxVuelos) {
+                                    maxVuelos = valor; // actualizamos el maximo de vuelos si el valor encontrado es mayor
+                                }
+                            }
+                        });
+
                         listaResultados = '<ul>'; // abrimos lista no ordenada
                         // Por cada resultado creamos un <li> con su detalle
                         partida.resultados.forEach(r => {
-                            listaResultados += `<li>${r.detalle}</li>`;
+                            // Comprobamos si el restultado es un histograma buscando el patron "X vuelos" en su detalle
+                            const match = r.detalle.match(/(\d+)\s+vuelos/); // buscamos un numero seguido de "vuelos" en el detalle del resultado
+                            if (match && maxVuelos > 0) {
+                                const valor = parseInt(match[1]); // si encontramos el patron, convertimos el numero a entero
+                                const porcentaje = (valor / maxVuelos) * 100; // calculamos el porcentaje del valor respecto al maximo para escalar la barra del histograma
+                                // Dibujamos el texto y una barra horizontal con el ancho proporcional
+                                listaResultados += `
+                                    <li>
+                                        ${r.detalle}
+                                        <div class="barra_histograma">
+                                            <div class="barra" style="width: ${porcentaje}%;"></div>
+                                        </div>
+                                    </li>
+                                `;
+                            } else {
+                                // Si no es un histograma, simplemente mostramos el detalle del resultado
+                                listaResultados += `<li>${r.detalle}</li>`;
+                            }
                         });
                         listaResultados += '</ul>'; // cerramos la lista
                     } else {
@@ -230,7 +273,35 @@
                     return coincideUsuario && coincideFase; // la partida se muestra si coincide el filtro de usuario y el filtro de fase
                 });
 
-                dibujarTabla(partidasFiltradas);
+                const partidasOrdenadas = ordenarPartidas(partidasFiltradas); // ordenamos antes de imprimir la tabla en pantalla
+                dibujarTabla(partidasOrdenadas); // dibujamos la tabla con las partidas ordenadas segun el filtro elegido
+            }
+
+            // Funcion que ordena un array de partidas segun la columna y direccion
+            function ordenarPartidas(partidasOrdenadas) {
+                return partidasOrdenadas.sort((a, b) => {
+                    let valorA = a[columnaOrdenada];
+                    let valorB = b[columnaOrdenada];
+
+                    // Si la columna a ordenar es fecha_hora, convertimos los valores a objetos Date para compararlos correctamente
+                    if (columnaOrdenada === 'fecha_hora') {
+                        valorA = new Date(valorA);
+                        valorB = new Date(valorB);
+                    } else {
+                        // Para texto pasamos a minusculas para que la ordenacion no sea sensible a mayusculas
+                        valorA = (valorA || '').toString().toLowerCase();
+                        valorB = (valorB || '').toString().toLowerCase();
+                    }
+
+                    // Comparamos segun la direccion de ordenacion que el usuario elija
+                    if (valorA < valorB) {
+                        return orden === 'asc' ? -1 : 1; // si el orden es ascendente, A va antes que B. Si es descendente, B va antes que A
+                    } else if (valorA > valorB) {
+                        return orden === 'asc' ? 1 : -1; // si el orden es ascendente, B va antes que A. Si es descendente, A va antes que B
+                    } else {
+                        return 0; // si son iguales no cambiamos su orden
+                    }
+                })
             }
 
             // Eventos: cuando el usuario interactua con los filtros
@@ -248,6 +319,25 @@
                 document.getElementById('filtroSubfase').value = ''; // limpiamos el filtro de subfase
                 aplicarFiltros(); // volvemos a dibujar la tabla con todas las partidas
             });
+
+            // Cuando se hace click en una cabecera cambiamos la ordenacion
+            document.querySelectorAll('th[data-columna]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const columna = th.getAttribute('data-columna'); // columna por la que se ha hecho click
+
+                    if (columnaOrdenada === columna) {
+                        // Si ya estamos ordenando por esa columna, cambiamos la direccion
+                        orden = orden === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // Si no, empezamos a ordenar por esa columna en orden ascendente
+                        columnaOrdenada = columna;
+                        orden = 'asc';
+                    }
+
+                    aplicarFiltros(); // volvemos a filtrar y ordenar
+                })
+            })
+
         </script>
     </body>
 </html>
