@@ -42,12 +42,12 @@ app.get('/api/partidas', async (req, res) => {
     // Guardar el array de partidas
     const partidas = result.recordset;
 
+    // Pedimos todos los resultados de golpe en otra consola
+    let todosResultados = await pool.request().query('SELECT * FROM partida_resultados ORDER BY partida_id, indice ASC');
+
     // Para cada partida buscar sus resultados asociados en partida_resultados
     for (let partida of partidas) {
-      let resultados = await pool.request()
-        .input('partidaId', sql.Int, partida.id) // pasamos el id de la partida como parametro
-        .query('SELECT * FROM partida_resultados WHERE partida_id = @partidaId ORDER BY indice ASC');
-      partida.resultados = resultados.recordset; // anidamos los resultados dentro de cada partida
+      partida.resultados = todosResultados.recordset.filter(r => r.partida_id === partida.id);
     }
 
     // Devolver el JSON con todas las partidas y sus resultados

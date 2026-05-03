@@ -8,9 +8,8 @@
 
     <body>
         <!-- Cabecera de la pagina -->
-        <h1>Paradigmas de Programación Avanzada</h1>
-        <p>Listado de partidas ejecutadas en el programa CUDA, ordenadas por fecha.</p>
-
+        <h1>PL2 PAP - Visor de Partidas</h1>
+        
         <!-- Estadisticas globales calculadas a partir de las partidas-->
         <div class="estadisticas">
             <div class="stat-card">
@@ -43,8 +42,11 @@
             <button id="btnLimpiar">Limpiar Filtros</button>
         </div>
         
-        <div class="contador" id="contador">
-            Mostrando <strong>0</strong> de <strong>0</strong> partidas registradas.
+        <div class="barra-tabla">
+            <button id="btnDarkMode">Modo Oscuro</button>
+            <div class="contador" id="contador">
+                Mostrando <strong>0</strong> de <strong>0</strong> partidas registradas.
+            </div>
         </div>
 
         <!-- Tabla principal donde se mostraran las partidas -->
@@ -52,11 +54,11 @@
             <thead>
                 <!-- Cabecera de la tabla con el nombre de cada columna -->
                 <tr>
-                    <th data-columna="usuario">Usuario<span class="flecha">▼</span></th>
-                    <th data-columna="fase">Fase<span class="flecha">▼</span></th>
-                    <th data-columna="opciones_entrada">Opciones de Entrada<span class="flecha">▼</span></th>
+                    <th data-columna="usuario">Usuario<span class="flecha">⇅</span></th>
+                    <th data-columna="fase">Fase<span class="flecha">⇅</span></th>
+                    <th data-columna="opciones_entrada">Opciones de Entrada<span class="flecha">⇅</span></th>
                     <th>Resultados</th>
-                    <th data-columna="fecha_hora">Fecha y Hora<span class="flecha">▼</span></th>
+                    <th data-columna="fecha_hora">Fecha y Hora<span class="flecha">⇅</span></th>
                 </tr>
             </thead>
             <!-- Cuerpo de la tabla, se rellena dinamicamente con JavaScript -->
@@ -150,14 +152,17 @@
 
                 // Ponemos las flechitas de ordenacion 
                 document.querySelectorAll('th .flecha').forEach(f => {
-                    f.textContent = '▼'; // por defecto todas las columnas tienen la flecha de ordenacion hacia abajo
+                    f.textContent = '⇅'; // por defecto todas las columnas tienen la flecha de ordenacion hacia abajo
                     f.classList.remove('activa'); // eliminamos las clases de ordenacion para quitar el color a la flecha
                 });
                 const cabeceraOrden = document.querySelector(`th[data-columna="${columnaOrdenada}"] .flecha`);
                 if (cabeceraOrden) {
-                    cabeceraOrden.textContent = orden === 'asc' ? ' ▲' : ' ▼';
+                    cabeceraOrden.textContent = orden === 'asc' ? '↑' : '↓';
                     cabeceraOrden.classList.add('activa'); // añadimos una clase para resaltar la columna por la que se esta ordenando
                 }
+
+                // Construimos el HTML completo como un string acumulado para no tocar el DOM
+                let htmlCompleto = '';
 
                 // Recorremos cada partida del array que nos devuelve el servidor
                 partidasMostrar.forEach(partida => {
@@ -208,7 +213,7 @@
                     }
 
                     // Añadimos una nueva fila a la tabla con todos los datos de la partida
-                    tbody.innerHTML += `
+                    htmlCompleto += `
                         <tr>
                             <td>${partida.usuario}</td>
                             <td>${partida.fase}</td>
@@ -218,6 +223,9 @@
                         </tr>
                     `;
                 });
+
+                // Asignamos al DOM una sola vez al final para evitar repintados innecesarios y mejorar el rendimiento
+                tbody.innerHTML = htmlCompleto;
             }
 
             // Funcion que calcula las estadisticas globales
@@ -338,6 +346,32 @@
                 })
             })
 
+            // Boton para cambiar entre modo claro y modo oscuro
+            const btnDarkMode = document.getElementById('btnDarkMode');
+            btnDarkMode.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode'); // añade o quita la clase dark-mode
+
+                // Cambiamos el texto del boton segun el modo
+                if(document.body.classList.contains('dark-mode')) {
+                    btnDarkMode.textContent = 'Modo Claro';
+                } else {
+                    btnDarkMode.textContent = 'Modo Oscuro';
+                }
+            })
+
+            // Auto-refresh: cada 30 segundos volvemos a pedir las partidas al servidr
+            setInterval(() => {
+                fetch('/api/partidas')
+                .then(res => res.json()) // convertimos la respuesta a JSON
+                .then(data => {
+                    partidas = data; // guardamos las partidas para luego filtrar
+                    calcularEstadisticas(data); // calculamos las estadisticas globales 
+                    aplicarFiltros(); // aplicamos los filtros al inicio y dibujamos la tabla
+                })
+                .catch(error => {
+                    console.error('Error al cargar las partidas:', error);
+                });
+            }, 30000); // 30000 milisegundos = 30 segundos
         </script>
     </body>
 </html>

@@ -1,4 +1,411 @@
-/* Fondo */
+/* ===============================================
+                Variables Globales:
+Definimos los colores en un solo sitio por comodidad
+   =============================================== */
+:root {
+    --color-fondo-pagina: #e2f5f7;
+    --color-fondo-tarjeta: #f5fbfc;
+    --color-borde-tarjeta: rgba(15, 76, 117, 0.15);
+    --color-texto-principal: #08043e;
+    --color-texto-secundario: #475569;
+    --color-titulo-oscuro: #08043e;
+    --color-titulo-claro: #075985;
+    --color-numero-estadisticas: #08043e;
+    --color-sombra-tarjetas: rgba(12, 74, 110, 0.18);
+    --color-resplandor-hover: rgba(12, 74, 110, 0.3);
+}
+
+/* ===============================================
+                    Reset Basico: 
+    quitamos los estilos por defecto del navegador
+   =============================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===============================================
+                Estilo base del body 
+   ===============================================*/
 body {
-    background: #E0F2E9;
+    font-family: 'Poppins', sans-serif;
+    background: var(--color-fondo-pagina); /* color plano de fondo */
+    min-height: 100vh; /* ocupa al menos toda la pantalla */
+    color: var(--color-texto-principal);
+    padding: 40px 20px; /* margen vertical */
+    line-height: 1.6; /* espaciado entre líneas */
+}
+
+/* ===============================================
+                    Cabecera y titulo 
+   ===============================================*/
+h1 {
+    text-align: center; /* centramos el titulo */
+    font-family: 'Outfit', 'Poppins', sans-serif; /* fuente para el titulo */
+    font-size: 3.5rem; /* tamaño grande para el titulo */
+    font-weight: 800; /* negrita para destacar */
+    margin-bottom: 16px; /* separacion con el subtitulo */
+    letter-spacing: -1.5px; /* ajuste de espacio entre letras */
+    color: var(--color-titulo-oscuro);
+
+    /* Sombra de texto para dar profundidad */
+    filter: drop-shadow(0 2px 4px var(--color-sombra-tarjetas)) drop-shadow(0 4px 12px var(--color-resplandor-hover));
+    padding: 10px 0; /* espacio para que la sombra no se corte */
+}
+
+/* ===============================================
+                Tarjetas de estadisticas 
+   ===============================================*/
+
+/* Ponemos las tres tarjetas en fila */
+.estadisticas {
+    display: flex; /* las tarjetas se colocan en fila */
+    justify-content: center; /* centramos las tarjetas horizontalmente */
+    gap: 24px; /* espacio entre tarjetas */
+    margin-bottom: 40px; /* espacio debajo de las tarjetas */
+    flex-wrap: wrap; /* permiten envolver en pantallas pequeñas */
+}
+
+/* Cada tarjeta individual */
+.stat-card {
+    background-color: var(--color-fondo-tarjeta); 
+    border: 1px solid var(--color-borde-tarjeta); /* borde sutil para definir la tarjeta */
+    border-radius: 16px; /* bordes redondeados */
+    padding: 28px 40px; /* espacio interno */
+    min-width: 220px; /* ancho mínimo para mantener la forma */
+    text-align: center; /* centramos el texto dentro de la tarjeta */
+    box-shadow: 0 4px 16px var(--color-sombra-tarjetas); /* sombra para dar profundidad */
+    transition: all 0.3s ease; /* transición suave para interacciones */
+}
+
+/* Cuando el raton pasa por encima de la tarjea, esta se eleva un poco */
+.stat-card:hover {
+    transform: translateY(-4px); /* eleva la tarjeta */
+    box-shadow: 0 8px 24px var(--color-resplandor-hover); /* sombra más intensa al elevarse */
+}
+
+/* Numero grande dentro de la tarjeta */
+.stat-card .numero {
+    font-size: 3rem; /* tamaño grande para el numero */
+    font-weight: 800; /* negrita para destacar el numero */
+    color: var(--color-numero-estadisticas);
+    margin-bottom: 8px; /* espacio entre el numero y la descripcion */
+    line-height: 1; /* ajustamos el interlineado para el numero */
+}
+
+/* Etiqueta debajo del numero */
+.stat-label {
+    font-size: 0.95rem; /* tamaño para la etiqueta */
+    font-weight: 500; /* seminegrita para la etiqueta */
+    color: var(--color-texto-secundario);
+    text-transform: uppercase; /* mayusculas para la etiqueta */
+    letter-spacing: 1px; /* espacio entre letras para la etiqueta */
+}
+
+/* ===============================================
+                        Filtros
+   ===============================================*/
+
+/* Contenedor de los filtros */
+.filtros {
+    display: flex; /* los filtros se colocan en fila */
+    justify-content: center; /* centramos los filtros horizontalmente */
+    gap: 16px; /* espacio entre filtros */
+    margin-bottom: 20px; /* espacio debajo de los filtros */
+    flex-wrap: wrap; /* permiten envolver en pantallas pequeñas */
+}
+
+/* Estilo para cada filtro */
+.filtros input,
+.filtros select {
+    padding: 12px 18px; /* espacio interno para el select */
+    font-family: 'Poppins', sans-serif; /* fuente para los filtros */
+    font-size: 0.95rem; /* tamaño de fuente para el select */
+    color: var(--color-texto-principal); /* color del texto */
+    background-color: var(--color-fondo-tarjeta); /* fondo del select para coherencia */
+    border: 2px solid var(--color-borde-tarjeta); /* borde para definir el select */
+    border-radius: 12px; /* bordes redondeados */
+    box-shadow: 0 2px 8px var(--color-sombra-tarjetas); /* sombra para dar profundidad */
+    transition: all 0.3s ease; /* transición suave para interacciones */
+    min-width: 200px; /* ancho mínimo para los filtros */
+    outline: none; /* quitamos el borde de enfoque por defecto */
+}
+
+/* Cuando el raton pasa por encima del select, este se resalta */
+.filtros input:focus,
+.filtros select:focus {
+    border-color: var(--color-titulo-claro); /* cambiamos el color del borde al pasar el raton */
+    box-shadow: 0 4px 12px var(--color-resplandor-hover); /* sombra más intensa al resaltar */
+}
+
+/* Boton de limpiar filtros */
+.filtros button {
+    padding: 12px 24px; /* espacio interno para el boton */
+    font-family: 'Poppins', sans-serif; /* fuente para el boton */
+    font-size: 0.95rem; /* tamaño de fuente para el boton */
+    font-weight: 600; /* seminegrita para el boton */
+    color: white; /* color del texto del boton */
+    background-color: var(--color-titulo-oscuro); /* fondo del boton para destacar */
+    border: none; /* sin borde para el boton */
+    border-radius: 12px; /* bordes redondeados */
+    box-shadow: 0 4px 12px var(--color-sombra-tarjetas); /* sombra para dar profundidad al boton */
+    cursor: pointer; /* cursor de mano al pasar por el boton */
+    transition: all 0.3s ease; /* transición suave para interacciones */
+}
+
+/* Cuando el raton pasa por encima del boton, este se resalta */
+.filtros button:hover {
+    transform: translateY(-2px); /* eleva ligeramente el boton */
+    background-color: var(--color-titulo-claro); /* cambiamos el fondo del boton al pasar el raton */
+    box-shadow: 0 6px 16px var(--color-resplandor-hover); /* sombra más intensa al resaltar el boton */
+}
+
+/* Cuando se pulsa el boton, vuelve a su posicion original */
+.filtros button:active {
+    transform: translateY(0); /* vuelve a la posición original */
+}
+
+/* ===============================================
+                        Tabla
+   ===============================================*/
+
+/* La tabla */
+#tabla {
+    width: 98%; /* ocupa el 98% de la pagina */
+    max-width: 1400px; /* ancho maximo para que no se extienda demasiado en pantallas grandes */
+    margin: 0 auto; /* centramos la tabla horizontalmente */
+    border-collapse: separate; /* permite usar border-radius en filas */
+    border-spacing: 0; /* sin espacio entre celdas */
+    background-color: var(--color-fondo-tarjeta); /* fondo de la tabla para coherencia */
+    border-radius: 16px; /* bordes redondeados para toda la tabla */
+    overflow: hidden; /* para que las esquinas redondeadas funcionen correctamente */
+    box-shadow: 0 4px 16px var(--color-sombra-tarjetas); /* sombra para dar profundidad a la tabla */
+}
+
+/* Cabecera de la tabla */
+#tabla thead {
+    background-color: var(--color-titulo-oscuro); /* fondo oscuro para la cabecera */
+}
+
+/* Celdas de la cabecera */
+#tabla thead th {
+    color: white; /* texto blanco para la cabecera */
+    font-weight: 700; /* seminegrita para la cabecera */
+    padding: 16px 20px; /* espacio interno en las celdas de la cabecera */
+    text-align: center; /* alineación del texto en la cabecera */
+    font-size: 0.95rem; /* tamaño de fuente para la cabecera */
+    text-transform: uppercase; /* mayusculas para la cabecera */
+    letter-spacing: 0.5px; /* espacio entre letras para la cabecera */
+    user-select: none; /* evita que se pueda seleccionar el texto de la cabecera */
+}
+
+/* Celdas del cuerpo de la tabla */
+#tabla tbody td {
+    padding: 14px 20px; /* espacio interno en las celdas del cuerpo */
+    border-bottom: 1px solid var(--color-borde-tarjeta); /* borde inferior para separar filas */
+    color: var(--color-texto-principal); /* color del texto en las celdas del cuerpo */
+    vertical-align: middle; /* alineación vertical de las celdas */
+    font-size: 0.9rem; /* tamaño de fuente para las celdas del cuerpo */
+}
+
+/* Ultima fila sin borde inferior */
+#tabla tbody tr:last-child td {
+    border-bottom: none; /* quitamos el borde inferior de la última fila */
+}
+
+/* ===============================================
+                Anchos de las columnas 
+   ===============================================*/
+
+/* La tabla debe respetar los anchos definidos */
+#tabla {
+    table-layout: fixed; /* las columnas tienen el ancho que definamos */
+}
+
+/* Anchos por columna */
+#tabla th:nth-child(1), /* Usuario */
+#tabla td:nth-child(1) {
+    width: 13%;
+}
+
+#tabla th:nth-child(2), /* Fase */
+#tabla td:nth-child(2) {
+    width: 20%;
+}
+
+#tabla th:nth-child(3), /* Opciones de Entrada */
+#tabla td:nth-child(3) {
+    width: 23%;
+}
+
+#tabla th:nth-child(4), /* Resultados */
+#tabla td:nth-child(4) {
+    width: 28%;
+}
+
+#tabla th:nth-child(5), /* Fecha y Hora */
+#tabla td:nth-child(5) {
+    width: 14%;
+}
+
+/* Para que el texto largo se ajuste y no rompa el layout */
+#tabla td {
+    word-wrap: break-word; /* permite que palabras largas salten de linea */
+    overflow-wrap: break-word;
+}
+
+/* ===============================================
+        Flechas de ordenacion en la cabecera
+   ===============================================*/
+
+/* Cuadrado de la flecha de ordenacion */
+#tabla thead th .flecha {
+    display: inline-block; /* para que la flecha se muestre al lado del texto */
+    margin-left: 8px; /* espacio entre el texto y la flecha */
+    font-size: 1rem; /* tamaño de fuente para la flecha */
+    color: rgba(255, 255, 255, 0.5); /* color de la flecha */
+    cursor: pointer; /* cursor de mano al pasar por la flecha */
+    transition: all 0.2s ease; /* transición suave para el fondo de la flecha al hacer hover */
+    user-select: none; /* no se selecciona al hacer click */
+    font-weight: normal; /* seminegrita para la flecha */
+}
+
+/* Hover sobre la flecha de ordenacion */
+#tabla thead th .flecha:hover {
+    color: white; /* cambiamos el color de la flecha al pasar el raton */
+    transform: scale(1.2); /* eleva ligeramente la flecha al pasar el raton */
+}
+
+/* ===============================================
+                      Histograma
+   ===============================================*/
+
+.barra_histograma {
+    width: 100%; /* ancho completo para que la barra ocupe todo el espacio disponible */
+    height: 8px; /* altura de las barras del histograma */
+    background-color: var(--color-borde-tarjeta); /* color de las barras del histograma */
+    border-radius: 4px; /* bordes redondeados para las barras del histograma */
+    margin-top: 6px; /* espacio entre el texto y el histograma */
+    margin-bottom: 4px; /* espacio debajo del histograma */
+    overflow: hidden; /* para que las esquinas redondeadas funcionen correctamente */
+    display: block; /* para colocar la barra rellena dentro de la barra del histograma */
+}
+
+.barra_histograma .barra {
+    height: 8px; /* altura completa para que la barra ocupe toda la altura del contenedor */
+    background: linear-gradient(90deg, var(--color-titulo-claro), var(--color-titulo-oscuro)); /* degradado para las barras rellenas del histograma */
+    border-radius: 4px; /* bordes redondeados para la barra rellena del histograma */
+    transition: width 0.5s ease; /* transición suave para el cambio de ancho de la barra */
+    display: block; /* para que la barra rellena se muestre como bloque dentro de la barra del histograma */
+    min-width: 2px; /* ancho mínimo para que la barra rellena sea visible incluso con valores pequeños */
+}
+
+/* ===============================================
+               Boton Dark Mode y Contador
+   ===============================================*/
+
+.barra-tabla {
+    display: flex; 
+    justify-content: space-between;
+    align-items: center; /* centrados verticalmente */
+    margin-bottom: 24px; /* separacion con la tabla */
+    padding: 0 12px; /* margen lateral */
+    max-width: 1400px; /* mismo ancho maximo que la tabla */
+    margin-left: auto; /* centramos junto con la tabla */
+    margin-right: auto;
+    width: 98%;
+}
+
+.barra-tabla .contador {
+    margin-bottom: 0;
+    padding-right: 0;
+}
+
+/* Boton de dark mode */
+#btnDarkMode {
+    padding: 10px 18px; /* espacio interno */
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-texto-principal);
+    background-color: var(--color-fondo-tarjeta);
+    border: 2px solid var(--color-borde-tarjeta);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px var(--color-sombra-tarjetas);
+    cursor: pointer;
+    transition: all 0.3 ease;
+}
+
+/* Hover del boton */
+#btnDarkMode:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--color-resplandor-hover);
+    border-color: var(--color-titulo-claro);
+}
+
+/* ===============================================
+                    Contador:
+            "Mostrando X de Y partidas"
+   ===============================================*/
+
+/* Contenedor del contador */
+.contador {
+    text-align: right; /* ubicacion del texto del contador */
+    font-size: 0.85rem; /* tamaño de fuente para el contador */
+    color: var(--color-texto-secundario); /* color del texto del contador */
+    margin-bottom: 24px; /* espacio debajo del contador */
+    font-weight: 500; /* seminegrita para el contador */
+    padding-right: 12px; /* espacio a la derecha para que no toque el borde */
+}
+
+/* Los numeros dentro del contador */
+.contador strong {
+    font-weight: 700; /* negrita para los numeros */
+    color: var(--color-titulo-oscuro); /* color diferente para los numeros */
+}
+
+/* ===============================================
+                    Dark Mode
+   ===============================================*/
+
+body.dark-mode {
+    --color-fondo-pagina: #0f172a;
+    --color-fondo-tarjeta: #1e293b;
+    --color-borde-tarjeta: rgba(255, 255, 255, 0.12);
+    --color-texto-principal: #e2f5f7;
+    --color-texto-secundario: #94a3b8;
+    --color-titulo-oscuro: #f5fbfc;
+    --color-titulo-claro: #cbd5e1;
+    --color-numero-estadisticas: #f5fbfc;
+    --color-sombra-tarjetas: rgba(0, 0, 0, 0.3);
+    --color-resplandor-hover: rgba(255, 255, 255, 0.15);
+}
+
+/* Cabecera de la tabla en dark mode */
+body.dark-mode #tabla thead {
+    background-color: var(--color-numero-estadisticas);
+}
+
+body.dark-mode #tabla thead th {
+    color: var(--color-fondo-pagina);
+}
+
+/* Las flechas en la cabecera tienen que ser oscuras */
+body.dark-mode #tabla thead th .flecha {
+    color: rgba(15, 23, 42, 0.5);
+}
+
+body.dark-mode #tabla thead th .flecha:hover {
+    color: var(--color-fondo-pagina);
+}
+
+/* En dark-mode el boton de limpiar filtros se ilumina */
+body.dark-mode .filtros button {
+    background-color: var(--color-numero-estadisticas);
+    color: var(--color-fondo-pagina);
+}
+
+body.dark-mode .filtros button:hover {
+    background-color: var(--color-titulo-claro);
 }
